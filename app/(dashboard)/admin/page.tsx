@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,8 +10,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { deletePoll } from "@/app/lib/actions/poll-actions";
+import { adminDeletePoll } from "@/app/lib/actions/poll-actions";
+import { isUserAdmin } from "@/app/lib/actions/auth-actions";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/app/lib/context/auth-context";
 
 interface Poll {
   id: string;
@@ -24,10 +27,36 @@ export default function AdminPage() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    fetchAllPolls();
-  }, []);
+    checkAdminAccess();
+  }, [user]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchAllPolls();
+    }
+  }, [isAdmin]);
+
+  const checkAdminAccess = async () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    const adminStatus = await isUserAdmin();
+    if (!adminStatus) {
+      router.push('/polls'); // Redirect non-admin users
+      return;
+    }
+
+    setIsAdmin(true);
+    setAuthLoading(false);
+  };
 
   const fetchAllPolls = async () => {
     const supabase = createClient();
@@ -44,15 +73,29 @@ export default function AdminPage() {
   };
 
   const handleDelete = async (pollId: string) => {
+    if (!confirm('Are you sure you want to delete this poll? This action cannot be undone.')) {
+      return;
+    }
+    
     setDeleteLoading(pollId);
-    const result = await deletePoll(pollId);
+    const result = await adminDeletePoll(pollId);
 
     if (!result.error) {
       setPolls(polls.filter((poll) => poll.id !== pollId));
+    } else {
+      alert(`Error deleting poll: ${result.error}`);
     }
 
     setDeleteLoading(null);
   };
+
+  if (authLoading) {
+    return <div className="p-6">Checking admin access...</div>;
+  }
+
+  if (!isAdmin) {
+    return <div className="p-6">Access denied. Admin privileges required.</div>;
+  }
 
   if (loading) {
     return <div className="p-6">Loading all polls...</div>;

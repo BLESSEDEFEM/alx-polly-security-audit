@@ -60,3 +60,30 @@ export async function getSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
 }
+
+// Check if user is admin
+export async function isUserAdmin() {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    return false;
+  }
+  
+  // Check if user has admin role in user_metadata or a separate admin table
+  // For this demo, we'll check user_metadata.role
+  return user.user_metadata?.role === 'admin';
+}
+
+// Get user with role information
+export async function getUserWithRole() {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    return { user: null, isAdmin: false, error: error?.message };
+  }
+  
+  const isAdmin = user.user_metadata?.role === 'admin';
+  return { user, isAdmin, error: null };
+}
