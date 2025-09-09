@@ -15,6 +15,28 @@ import { isUserAdmin } from "@/app/lib/actions/auth-actions";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/app/lib/context/auth-context";
 
+/**
+ * Admin Dashboard Page Component
+ * 
+ * Provides administrative interface for managing all polls in the system.
+ * Only accessible to users with admin privileges. Displays comprehensive
+ * poll information including owner details and provides bulk management capabilities.
+ * 
+ * Security Features:
+ * - Admin privilege verification before rendering
+ * - Secure poll deletion with confirmation
+ * - Access control enforcement
+ * 
+ * Features:
+ * - View all polls across the platform
+ * - Delete any poll with admin privileges
+ * - Display poll metadata (ID, owner, creation date)
+ * - Real-time poll data fetching
+ * - Loading states and error handling
+ * 
+ * @returns {JSX.Element} Admin panel interface or access denied message
+ */
+
 interface Poll {
   id: string;
   question: string;
@@ -24,24 +46,30 @@ interface Poll {
 }
 
 export default function AdminPage() {
-  const [polls, setPolls] = useState<Poll[]>([]);
-  const [loading, setLoading] = useState(true);
+  // State management for admin panel data and UI states
+  const [polls, setPolls] = useState<Poll[]>([]); // All polls in the system
+  const [loading, setLoading] = useState(true); // Loading state for poll data
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // Admin privilege verification status
   const [authLoading, setAuthLoading] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
 
+  // Redirect non-authenticated users and verify admin status
   useEffect(() => {
     checkAdminAccess();
   }, [user]);
 
   useEffect(() => {
     if (isAdmin) {
-      fetchAllPolls();
+      fetchAllPolls(); // Load all polls only for verified admins
     }
   }, [isAdmin]);
 
+  /**
+   * Verifies if the current user has admin privileges
+   * Only loads poll data if admin status is confirmed
+   */
   const checkAdminAccess = async () => {
     if (!user) {
       router.push('/login');
@@ -58,13 +86,17 @@ export default function AdminPage() {
     setAuthLoading(false);
   };
 
+  /**
+   * Fetches all polls from the database for admin review
+   * Ordered by creation date (newest first) for better management
+   */
   const fetchAllPolls = async () => {
     const supabase = createClient();
 
     const { data, error } = await supabase
       .from("polls")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }); // Show newest polls first
 
     if (!error && data) {
       setPolls(data);
@@ -72,15 +104,22 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  /**
+   * Handles poll deletion with admin privileges
+   * Includes confirmation dialog to prevent accidental deletions
+   * @param {string} pollId - The ID of the poll to delete
+   */
   const handleDelete = async (pollId: string) => {
+    // Confirmation dialog to prevent accidental deletions
     if (!confirm('Are you sure you want to delete this poll? This action cannot be undone.')) {
       return;
     }
     
     setDeleteLoading(pollId);
-    const result = await adminDeletePoll(pollId);
+    const result = await adminDeletePoll(pollId); // Use admin-privileged deletion
 
     if (!result.error) {
+      // Update local state to reflect deletion immediately
       setPolls(polls.filter((poll) => poll.id !== pollId));
     } else {
       alert(`Error deleting poll: ${result.error}`);

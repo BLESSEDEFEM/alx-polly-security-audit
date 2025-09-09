@@ -15,21 +15,46 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/app/lib/context/auth-context";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { user, signOut, loading } = useAuth();
-  const router = useRouter();
+/**
+ * Dashboard Layout Component
+ * 
+ * Provides the main layout structure for all dashboard pages, including
+ * navigation header, user authentication controls, and content area.
+ * Handles authentication state and redirects unauthenticated users.
+ * 
+ * Features:
+ * - Persistent navigation header with branding
+ * - User avatar and dropdown menu
+ * - Authentication state management
+ * - Automatic redirect for unauthenticated users
+ * - Responsive design with mobile considerations
+ * - Loading states during authentication checks
+ * 
+ * @param {Object} props - Component props
+ * @param {ReactNode} props.children - Child components to render in the layout
+ * @returns {JSX.Element} Dashboard layout with navigation and content area
+ */
 
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const { user, signOut, loading } = useAuth(); // Authentication context
+  const router = useRouter(); // Next.js router for navigation
+
+  // Redirect unauthenticated users to login page
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.push("/login"); // Protect dashboard routes
     }
   }, [user, loading, router]);
 
+  /**
+   * Handles user sign out and redirects to login page
+   */
   const handleSignOut = async () => {
-    await signOut();
-    router.push("/login");
+    await signOut(); // Clear user session
+    router.push("/login"); // Redirect to login after sign out
   };
 
+  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -38,6 +63,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // Don't render anything if user is not authenticated (will redirect)
   if (!user) {
     return null;
   }

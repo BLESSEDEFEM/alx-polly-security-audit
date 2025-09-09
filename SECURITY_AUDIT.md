@@ -245,7 +245,3 @@ All identified security vulnerabilities have been successfully remediated. The a
 The security posture of the ALX Polly application has been significantly improved. Regular security reviews and testing should be conducted to maintain this security level.
 
 ---
-
-**Audit Date:** January 2024  
-**Auditor:** Security Assessment Team  
-**Next Review:** Recommended within 6 months
